@@ -1,0 +1,97 @@
+class Twitter {
+    int time = 0;
+    unordered_map<int,vector<pair<int,int>>> postRecord;
+    unordered_map<int,unordered_set<int>> follower;
+    
+public:
+    Twitter() {
+       
+    }
+    
+    void postTweet(int userId, int tweetId) {
+        vector<pair<int,int>>& postList = postRecord[userId];
+        postList.push_back({time,tweetId});
+        time++;
+    }
+    
+    vector<int> getNewsFeed(int userId) {
+        vector<int> res;
+        priority_queue<vector<int>> maxheap;
+        if(!follower.count(userId))
+        {
+            follower.insert({userId,{userId}});
+        }
+        unordered_set<int>& followList =follower[userId]; //該userID追隨的清單
+        if(followList.size() > 10)
+        {
+            priority_queue<vector<int>,vector<vector<int>>,greater<vector<int>>> minheap;
+            for(auto followee : followList)
+            {
+                if(postRecord.count(followee))
+                {
+                    int idx = postRecord[followee].size()-1;
+                    minheap.push({postRecord[followee][idx].first,postRecord[followee][idx].second,followee,idx-1});
+                }
+                if(minheap.size() > 10)
+                {
+                    minheap.pop();
+                }
+            }
+            while(!minheap.empty())
+            {
+                maxheap.push(minheap.top());
+                minheap.pop();
+            }
+        }
+        else
+        {
+            for(auto followee : followList) //O(n*logn)
+            {
+                if(postRecord.count(followee))
+                {
+                    vector<pair<int,int>>& postList = postRecord[followee];
+                int idx = postList.size()-1;
+                maxheap.push({postList[idx].first,postList[idx].second,followee,idx-1}); //{time,tweetId,posterId,nextPostIdx}
+                }
+            }
+        }
+        
+        while(!maxheap.empty() && res.size() < 10 ) //O(10*logn)
+        {
+            auto& infor = maxheap.top();
+            const int& postTime = infor[0];
+            const int& tweetId = infor[1];
+            const int& posterId = infor[2];
+            const int& next_postIdx = infor[3];
+            
+            if(next_postIdx >= 0)
+            {   
+                vector<pair<int,int>>& postList = postRecord[posterId];
+                maxheap.push({postList[next_postIdx].first,postList[next_postIdx].second,posterId,next_postIdx-1});
+            }
+            res.push_back(tweetId);
+            maxheap.pop();
+        }
+        time++;
+        return res;
+    }
+    
+    void follow(int followerId, int followeeId) {
+        if(!follower.count(followerId))
+        {
+            follower.insert({followerId,{followerId}});
+        }
+        follower[followerId].insert(followeeId);
+        time++;
+        return;
+    }
+    
+    void unfollow(int followerId, int followeeId) {
+        if(followerId != followeeId)
+        {
+            follower[followerId].erase(followeeId);
+        }
+        time++;
+        return;
+    }
+};
